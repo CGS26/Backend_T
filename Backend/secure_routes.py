@@ -197,6 +197,7 @@ def update_task(task_id: int, task: Task,token :str=Depends(get_current_user)):
 
     for key, value in task.dict().items():
         setattr(db_task, key, value)
+    push_notification(token.username,f"Successfully Udated Task with ID  {task_id} ")
     
     db.commit()
     db.refresh(db_task)
@@ -209,6 +210,7 @@ def update_task_status(task_id: int, status: str,token :str=Depends(get_current_
     db_task.update_status(status)
     db.commit()
     db.refresh(db_task)
+    push_notification(token.username,f"Successfully Udated Task with ID  {task_id}  ")
    
     return db_task
 
@@ -231,6 +233,7 @@ def delete_task(task_id: int,token :str=Depends(get_current_user)):
     
     db.delete(db_task)
     db.commit()
+    push_notification(token.username,f"Successfully Deleted Task with ID  {task_id} Successfully")
     return db_task
 
 @router.post('/Notification/')
