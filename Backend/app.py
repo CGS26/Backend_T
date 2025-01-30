@@ -29,8 +29,9 @@ app.add_middleware(
 
 )
 # app.include_router(test.router)/
+# app.include_router(secure_routes.router)
 app.include_router(secure_routes.router)
 
 
-if __name__=="__main__":
-     uvicorn.run(app,host="0.0.0.0",port=3002)
+# if __name__=="__main__":
+#      uvicorn.run(app,host="0.0.0.0",port=3002)

@@ -16,6 +16,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "mysecretkey")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 oauth_scheme=OAuth2PasswordBearer(tokenUrl="token")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -34,7 +35,7 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_current_user(token: str = Depends(oauth_scheme), ):
+def get_current_user(token: str = Depends(oauth_scheme) ):
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -51,7 +52,6 @@ def get_current_user(token: str = Depends(oauth_scheme), ):
     except jwt.PyJWTError:
         raise credentials_exception
     return user
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password, hashed_password):

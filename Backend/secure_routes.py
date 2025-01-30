@@ -17,6 +17,8 @@ import ssl
 import io
 from dotenv import  load_dotenv
 from analysis import generate_csv_report, plot_completed_tasks_per_day, plot_completion_trends, plot_task_priority_distribution, plot_time_vs_priority, preprocess_data,calculate_task_completion_time
+import pusher
+
 
 
 
@@ -29,6 +31,14 @@ db = SessionLocal()
 SENDGRID_API_KEY =os.getenv("SENDGRID_API_KEY","")
 FROM_EMAIL = os.getenv("FROM_EMAIL","")
 SENDGRID_CLIENT = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
+
+pusher_client = pusher.Pusher(
+  app_id=os.getenv("PUSHER_APP_ID",""),
+  key=os.getenv("PUSHER_KEY",""),
+  secret=os.getenv("PUSHER_SECRET",""),
+  cluster=os.getenv("PUSHER_CLUSTER",""),
+  ssl=True
+)
 
 class OurBaseModel(BaseModel):
     class Config:
@@ -108,7 +118,7 @@ def check_and_notify_due_tasks():
         send_email_notification(task)
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(check_and_notify_due_tasks, 'interval', hours=24)
+scheduler.add_job(check_and_notify_due_tasks, 'interval', seconds=10)
 # scheduler.start()
 
 
@@ -144,6 +154,7 @@ def register_user(user: UserCreate):
 
 @router.get("/tasks/{task_id}", response_model=Task)
 def get_task(task_id: int,token :str=Depends(get_current_user)):
+    
     task = db.query(model.Task).filter(model.Task.task_id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -151,10 +162,12 @@ def get_task(task_id: int,token :str=Depends(get_current_user)):
 
 @router.post("/addTasks", response_model=NTask)
 async def create_task(task: NTask,token :str=Depends(get_current_user)):
+
     db_task = model.Task(**task.dict())
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
+    push_notification(token.username,f"Created Task {task} Successfully with")
     return db_task
 
 
@@ -174,7 +187,6 @@ def mail_task(task_id: int,token :str=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Task not found")
     send_email_notification(task)
     return "mailed user"
-
 
 
 @router.put("/tasks/{task_id}", response_model=Task)
@@ -197,17 +209,19 @@ def update_task_status(task_id: int, status: str,token :str=Depends(get_current_
     db_task.update_status(status)
     db.commit()
     db.refresh(db_task)
+   
     return db_task
 
 @router.put("/tasks/duedate/{task_id}", response_model=Task)
-def update_task_status(task_id: int, duedate: datetime,token :str=Depends(get_current_user)):
+def update_task_duedate(task_id: int, duedate: datetime,token :str=Depends(get_current_user)):
     db_task = db.query(model.Task).filter(model.Task.task_id == task_id).first()
     db_task.update_due_date(duedate) 
     db.commit()
     db.refresh(db_task)
     return db_task
 
-
+def push_notification(userId:str=1,message:str='testing'):
+    pusher_client.trigger(f'user_{userId}', 'my-event', {'message':message})
 
 @router.delete("/tasks/{task_id}", response_model=Task)
 def delete_task(task_id: int,token :str=Depends(get_current_user)):
@@ -219,6 +233,10 @@ def delete_task(task_id: int,token :str=Depends(get_current_user)):
     db.commit()
     return db_task
 
+@router.post('/Notification/')
+def CallNotification(userId:str=1,message:str='Sample'):
+    push_notification(userId,message)
+    
 @router.get("/tasks", response_model=List[Task])
 def list_tasks(token :str=Depends(get_current_user)):
     tasks = db.query(model.Task).all()

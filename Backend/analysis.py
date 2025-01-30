@@ -10,7 +10,7 @@ def preprocess_data(df_from_query):
     df_from_query['due_date'] = pd.to_datetime(df_from_query['due_date'], errors='coerce')
     df_from_query['creation_date'] = pd.to_datetime(df_from_query['creation_date'], errors='coerce')
     df_from_query['completed_date'] = pd.to_datetime(df_from_query['completed_date'], errors='coerce')
-    df_from_query['status'].fillna('pending', inplace=True)
+    df_from_query['status'].fillna('Pending', inplace=True)
     df_from_query['completed_date'].fillna(pd.NaT, inplace=True)
 
     df_duplicates_removed = df_from_query.drop_duplicates(subset=df_from_query.columns.difference(['task_id', 'creation_date']))
